@@ -24,7 +24,10 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
    ```bash
    qs
    ```
-4. For autostart at login, copy quickshell-panel.desktop to ~/.config/autostart/
+4. Setup autostart at login.
+   ```bash
+   cp quickshell-panel.desktop  ~/.config/autostart/
+   ```
 
 ## Centralized Configuration Guide
 
