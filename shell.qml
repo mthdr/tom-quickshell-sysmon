@@ -248,7 +248,7 @@ ShellRoot {
                 Disk {
                     containerWidth: rootWindow.containerWidth
                     mountPoint: "/home"                // CHANGE THIS  *****
-                    mountDev: ""                       // or THIS *****
+                    mountDev: ""                       // or THIS, normally not needed *****
                     anchors.top: disk1Header.bottom
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -294,7 +294,7 @@ ShellRoot {
                 Disk {
                     containerWidth: rootWindow.containerWidth
                     mountPoint: "/backups"             // CHANGE THIS  *****
-                    mountDev: ""                       // or THIS *****
+                    mountDev: ""                       // or THIS, normally not needed *****
                     anchors.top: disk2Header.bottom
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -340,7 +340,7 @@ ShellRoot {
                 Disk {
                     containerWidth: rootWindow.containerWidth
                     mountPoint: "/timeshift"           // CHANGE THIS  *****
-                    mountDev: ""                       // or THIS *****
+                    mountDev: ""                       // or THIS, normally not needed *****
                     anchors.top: disk3Header.bottom
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
