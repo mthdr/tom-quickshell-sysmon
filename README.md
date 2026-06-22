@@ -29,11 +29,13 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
    cd ~/.config/quickshell
    git clone https://github.com/tomgonz/tom-quickshell-sysmon  .
    ```
-3. Run the dashboard using the quickshell daemon execution engine:
+3. Edit configuration variables in the shell.qml file to suite your needs.  netDev, cpuTempSensors..., etc...
+
+4. Run the dashboard using the quickshell daemon execution engine:
    ```bash
    qs
    ```
-4. Setup autostart at login.
+5. Setup autostart at login.
    ```bash
    cp quickshell-panel.desktop  ~/.config/autostart/
    ```
