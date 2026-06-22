@@ -4,15 +4,17 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 
 ![Screenshot](tom-qs-sysmon.png) <!-- Add a nice screenshot here -->
 
-## Features
+## Widgets
 
 - **Clock:** Time, Date, Uptime, seconds bar, tool tip for UTC time.
-- **ClockUTC:** Optional UTC clock, Time, Date, uncomment in shell to activate
+- **ClockUTC:** Optional UTC clock, Time, Date, uncomment in shell.qml to activate
 - **CPU:** CPU Clock, CPU temp, CPU average usage, CPU usage per core vertical bars, tooltip shows CPU model.
-- **Mem/Swap:** Memory / Swap, Total, Memory useage graph, Swap usage bar.
+- **Mem/Swap:** Memory / Swap, Total, Memory usage graph, Swap usage bar.
 - **Network:** Network, Device name, IP address, Upload graph bits/sec with scale max, and Download graph bits/sec with scale max.
 - **Disk:** Label for Disk/SSD type/size, mount point, Read bytes/sec graph with scale max, partition used bar, Write bytes/sec graph with scale max.
 - **Volume:** Volume setting and display bar, mouse wheel or click, MUTE button.
+
+## Features
 
 - **Very Efficient Processing:** All shell process loops (`cat`, `awk`, `grep`) with high-speed virtual `FileView` handles.
 - **Hardware Agnostic Thermal Tracking:** Fully parameterized 3-layer JSON lookup to support modern AMD (`k10temp`) and Intel (`coretemp`) sensors.
