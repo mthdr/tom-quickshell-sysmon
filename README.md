@@ -6,9 +6,16 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 
 ## Features
 
-- **Very Efficient Processing:** Replaces shell process loops (`cat`, `awk`, `grep`) with high-speed virtual `FileView` handles.
+- **Clock:** Time, Date, Uptime, seconds bar, tool tip for UTC time.
+- **ClockUTC:** Optional UTC clock, Time, Date, uncomment in shell to activate
+- **CPU:** CPU Clock, CPU temp, CPU average usage, CPU usage per core vertical bars, tooltip shows CPU model.
+- **Mem/Swap:** Memory / Swap, Total, Memory useage graph, Swap usage bar.
+- **Network:** Network, Device name, IP address, Upload graph bits/sec with scale max, and Download graph bits/sec with scale max.
+- **Disk:** Label for Disk/SSD type/size, mount point, Read bytes/sec graph with scale max, partition used bar, Write bytes/sec graph with scale max.
+- **Volume:** Volume setting and display bar, mouse wheel or click, MUTE button.
+
+- **Very Efficient Processing:** All shell process loops (`cat`, `awk`, `grep`) with high-speed virtual `FileView` handles.
 - **Hardware Agnostic Thermal Tracking:** Fully parameterized 3-layer JSON lookup to support modern AMD (`k10temp`) and Intel (`coretemp`) sensors.
-- **Interactive Controls:** Fluid volume tracker utilizing click, drag, and mouse-wheel gestures integrated straight with your system's Pipewire audio sync engine.
 - **Unified Graph Design:** Smooth, right-to-left scrolling visualizations across all core telemetry frameworks.
 
 ## Installation & Deployment
@@ -28,6 +35,33 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
    ```bash
    cp quickshell-panel.desktop  ~/.config/autostart/
    ```
+## Requirements
+
+1. /proc files...
+   ```bash
+   /proc/uptime
+   /proc/stat
+   /proc/cpuinfo
+   /proc/stat
+   /proc/diskstats
+   /proc/meminfo
+   ```
+2. /sys files...
+   ```bash
+   /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+   /sys/class/net/{interfaceName}/statistics/rx_bytes
+   /sys/class/net/{interfaceName}/statistics/tx_bytes
+   ```
+3. Bash commands...
+   ```bash
+   /usr/bin/sensors
+   /usr/bin/df
+   /usr/bin/sh
+   /usr/bin/ip
+   /usr/bin/awk
+   /usr/bin/cut
+   ```
+
 
 ## Centralized Configuration Guide
 
@@ -51,8 +85,8 @@ To swap out, add, or customize your storage monitoring components, look into the
 1. Update the unique container block instance element title (`id: diskWidgetX`).
 2. Add your custom visual descriptive drive label string (`text: "Drive Model Type"`).
 3. Set your contextual layout partition path display subtitle (`text: "(/path)"`).
-4. Inject your true system mount path string down to the core engine module (`mountPoint: "/target"`).
-5. In some virtualization cases you may need to set the disk device (`mountDev: "nvme0n1p3"`).
+4. Inject your true system mount path string down to the core engine module (`mountPoint: "/target"`). This is used for partition used, and will look the device to get IO stats.
+5. In some virtualization cases you may need to set the disk device (`mountDev: "nvme0n1p3"`). Start with this blank, only set this if you know you need to.
 
 Ensure any new widget `id` tags you initialize are registered up into the top compositor window masking table structure (`mask: Region { ... }`) to enable correct backdrop window transparency clip-outs!
 
