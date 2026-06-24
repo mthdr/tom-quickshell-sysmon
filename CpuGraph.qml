@@ -47,7 +47,7 @@ Item {
         spacing: 1
 
         // ------------------------------
-        // --- 1. Header: Temp & Clock (Standard Left/Right Positioner) ---
+        // --- 1. Header: Temp & Clock ---
         // ------------------------------
         Item {
             width: parent.width
@@ -70,7 +70,7 @@ Item {
         }
 
         // ------------------------------
-        // --- 2. CPU Graph (Normal Upward - Tinted Cyan) ---
+        // --- 2. CPU Usage Graph ---
         // ------------------------------
         Rectangle {
             id: cpuGraphRect
@@ -149,9 +149,10 @@ Item {
     }
 
     // ==================================================================
-    // Zero-Fork Data Gathering Subsystems
+    // Data Gathering Section
     // ==================================================================
-    
+
+    // -----------------------------------------
     // One-shot CPU Model Reader
     FileView {
         id: cpuInfoReader
@@ -172,7 +173,8 @@ Item {
         }
     }
 
-    // Corei CPU Load Statistics Reader
+    // -----------------------------------------
+    // Core CPU Load Statistics Reader
     FileView {
         id: statReader
         path: "/proc/stat"
@@ -212,6 +214,7 @@ Item {
         }
     }
 
+    // -----------------------------------------
     // Dynamic Clock Speed Frequency Reader
     FileView {
         id: freqReader
@@ -227,101 +230,81 @@ Item {
     }
 
 
-    //----------------------------------------------
-    // CPU Temp data processing (Hybrid Timer/Event State Machine)
-    //----------------------------------------------
-    
-    // Internal state tracking properties
-    property int _scanHwmonIdx: 0
-    property int _scanLabelIdx: 1
-    property string _foundHwmonPath: ""
-    property bool _isInitialized: false
 
-    // 1. Single reusable file reader
+    // Compressed scanning states
+    property int _hIdx: 0
+    property int _lIdx: 1
+    property string _baseDir: ""
+    property bool pathVarIsReady: false
+
+    // -----------------------------------------
+    // SECTION 1: One-Shot Discovery for CPU temp path/file
+    // -----------------------------------------
+    FileView {
+        id: discoveryReader
+        printErrors: false
+        onLoaded: {
+            let txt = (typeof text === "function" ? text() : text).trim();
+            if (!txt) return;
+
+            if (_baseDir === "" && txt === root.sensorChipName) {
+                _baseDir = "/sys/class/hwmon/hwmon" + (_hIdx - 1);
+            } else if (_baseDir !== "" && txt === root.sensorKeyName) {
+                resolvedTempPath = _baseDir + "/temp" + (_lIdx - 1) + "_input";
+                pathVarIsReady = true;      // 🏁 MASTER SWITCH: Stops scan, starts polling
+            }
+        }
+    }
+
+    // -----------------------------------------
+    // SECTION 2: Pure Runtime Reader (Timer polling every 2 Seconds)
+    // -----------------------------------------
     FileView {
         id: sysfsReader
-        printErrors: false // Prevents flooding logs when probing non-existent paths
-        
+        path: root.resolvedTempPath
+        printErrors: false
         onLoaded: {
-            // Securely evaluate the text string matching your working blocks
-            let content = (typeof text === "function") ? text() : text;
-            let cleaned = content ? content.trim() : "";
-            if (!cleaned) return;
-
-            // PHASE 1: Probing for driver match (e.g., "k10temp")
-            if (root._foundHwmonPath === "" && !root._isInitialized) {
-                if (cleaned === root.sensorChipName) {
-                    // Match found! Lock directory path and shift state
-                    root._foundHwmonPath = "/sys/class/hwmon/hwmon" + (root._scanHwmonIdx - 1);
-                }
-            } 
-            
-            // PHASE 2: Probing for sensor key match (e.g., "Tctl")
-            else if (root._foundHwmonPath !== "" && !root._isInitialized) {
-                if (cleaned === root.sensorKeyName) {
-                    root.resolvedTempPath = root._foundHwmonPath + "/temp" + (root._scanLabelIdx - 1) + "_input";
-                    root._isInitialized = true;
-                }
-            } 
-            
-            // PHASE 3: Standard Runtime Polling
-            else if (root._isInitialized) {
-                let milliDegrees = Number(cleaned);
-                if (!isNaN(milliDegrees)) {
-                    root.cpuTemp = Math.round(milliDegrees / 1000) + "°C";
-                }
-            }
+            let txt = (typeof text === "function" ? text() : text).trim();
+            if (!isNaN(txt)) root.cpuTemp = Math.round(Number(txt) / 1000) + "°C";
         }
     }
 
-    // 2. State Machine Driver: Drives indexing quickly at start, then switches to monitoring
-    // This part only runs once at startup.
-    // Finds the temp file needed from supplied vars in the /sys filesystem.
+
+    // ==================================================================
+    // Runtime Control Timer Loops
+    // ==================================================================
     Timer {
-        id: tempUpdateTimer
-        interval: root._isInitialized ? 2000 : 30 // 30ms ticks for fast discovery, 2s for runtime tracking
-        running: true
+        interval: 25
+        running: !root.pathVarIsReady     // Runs only while cpu temp path is NOT ready
         repeat: true
         triggeredOnStart: true
-
         onTriggered: {
-            // STEP A: Scan through hwmon0 to hwmon12 directories
-            if (root._foundHwmonPath === "" && !root._isInitialized) {
-                if (root._scanHwmonIdx < 13) {
-                    sysfsReader.path = "/sys/class/hwmon/hwmon" + root._scanHwmonIdx + "/name";
-                    root._scanHwmonIdx++;
+            if (_baseDir === "") {
+                if (_hIdx < 16) {
+                   discoveryReader.path = "/sys/class/hwmon/hwmon" + _hIdx++ + "/name";
                 } else {
-                    // Total search failure set to null so no temp shows
-                    root.resolvedTempPath = "/dev/null";
-                    root._isInitialized = true;
+                   resolvedTempPath = "/dev/null";   // could not find a cpu temp path
+                   pathVarIsReady = true;
                 }
-                return;
-            }
-
-            // STEP B: Driver folder found, now scan label numbers 1 through 8
-            if (root._foundHwmonPath !== "" && !root._isInitialized) {
-                if (root._scanLabelIdx <= 8) {
-                    sysfsReader.path = root._foundHwmonPath + "/temp" + root._scanLabelIdx + "_label";
-                    root._scanLabelIdx++;
+            } else {
+                if (_lIdx <= 8) {
+                   discoveryReader.path = _baseDir + "/temp" + _lIdx++ + "_label";
                 } else {
-                    // Fallback to default temp1_input if precise key label string is missing
-                    root.resolvedTempPath = root._foundHwmonPath + "/temp1_input";
-                    root._isInitialized = true;
+                   resolvedTempPath = _baseDir + "/temp1_input";
+                   pathVarIsReady = true;
                 }
-                return;
-            }
-
-            // STEP C: Active Monitoring Routine
-            if (root._isInitialized) {
-                sysfsReader.path = root.resolvedTempPath;
-                sysfsReader.reload();
             }
         }
     }
 
-    // ==================================================================
-    // Unified Control Loops
-    // ==================================================================
+    Timer {
+        interval: 2000
+        running: root.pathVarIsReady // Wakes up the exact moment the master switch flips
+        repeat: true
+        triggeredOnStart: true 
+        onTriggered: sysfsReader.reload()
+    }
+
     Timer {
         interval: 1000
         running: true
@@ -330,6 +313,7 @@ Item {
         onTriggered: {
             statReader.reload();
             freqReader.reload();
+            
         }
     }
 }
