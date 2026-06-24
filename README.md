@@ -31,12 +31,10 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
    ```
 3. Edit configuration variables in the shell.qml file to suit your needs.  netDev, cpuTempSensors..., etc...
 
-4. Run the dashboard using the quickshell daemon execution engine:
+4. Run the dashboard using the quickshell command. This will run the shell.qml file by default.
    ```bash
    qs
    ```
-This will run the shell.qml file by default.
-
 5. Setup autostart at login.
    ```bash
    cp quickshell-panel.desktop  ~/.config/autostart/
