@@ -6,12 +6,12 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 
 ## Widgets
 
-- **Clock:** Time, Date, Uptime, seconds bar, tool tip for UTC time.
+- **Clock:** Time, Date, Uptime, seconds bar, tooltip for UTC time.
 - **ClockUTC:** Optional UTC clock, Time, Date, uncomment in shell.qml to activate
 - **CPU:** CPU Clock, CPU temp, CPU average usage, CPU usage per core vertical bars, tooltip shows CPU model.
 - **Mem/Swap:** Memory / Swap, Total, Memory usage graph, Swap usage bar.
 - **Network:** Network, Device name, IP address, Upload graph bits/sec with scale max, and Download graph bits/sec with scale max.
-- **Disk:** Label for Disk/SSD type/size, mount point, Read bytes/sec graph with scale max, partition used bar, Write bytes/sec graph with scale max.
+- **Disk:** Label for Disk/SSD type/size, mount point, Read bytes/sec graph with scale max, partition used bar, Write bytes/sec graph with scale max, tooltip to show used percent over usage bar, tooltip to show drive model over label drive type/size.
 - **Volume:** Volume setting and display bar, mouse wheel or click, MUTE button.
 
 ## Features
