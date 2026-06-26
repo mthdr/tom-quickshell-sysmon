@@ -56,6 +56,8 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
    /sys/class/net/{interfaceName}/statistics/rx_bytes
    /sys/class/net/{interfaceName}/statistics/tx_bytes
    /sys/class/hwmon/hwmon*/*
+   /sys/class/nvme/nvme*
+   /sys/class/block/sd*
    ```
 3. Bash commands...
    ```bash
@@ -84,13 +86,12 @@ All primary environment configurations are managed right at the top of `shell.qm
 
 To swap out, add, or customize your storage monitoring components, look into the second half of `shell.qml`. Each disk panel consists of a structural background widget box. To map a device, modify the 4 specific commented lines:
 
-1. Update the unique container block instance element title (`id: diskWidgetX`).
+1. Update the unique container id for each disk widget (`id: diskWidgetX`).
 2. Add your custom visual descriptive drive label string (`text: "Drive Model Type"`).
-3. Set your contextual layout partition path display subtitle (`text: "(/path)"`).
-4. Inject your true system mount path string down to the core engine module (`mountPoint: "/target"`). This is used for partition used, and will look the device to get IO stats.
-5. In some virtualization cases you may need to set the disk device (`mountDev: "nvme0n1p3"`). Start with this blank, only set this if you know you need to.
+3. Set your true system mount path string to monitor (`mountPoint: "/target"`). This is used for partition space used, and will lookup the device to get IO stats.
+4. In some virtualization cases you may need to set the disk device (`mountDev: "nvme0n1p3"`). Start with this blank, only set this if you know you need to.
 
-Ensure any new widget `id` tags you initialize are registered up into the top compositor window masking table structure (`mask: Region { ... }`) to enable correct backdrop window transparency clip-outs!
+Ensure any new disk widget `id` is in the masking table structure (`mask: Region { ... }`) to enable correct backdrop window transparency clip-outs and Tooltips work correctly.
 
 ## License
 GPL-3.0
