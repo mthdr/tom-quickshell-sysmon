@@ -16,6 +16,7 @@ Item {
     required property int containerWidth
     required property string mountPoint
     required property string mountDev
+    required property string modelSize
     
     // Core Sizing Rule: Ensure the root object bounds trace the Column children perfectly
     width: containerWidth
@@ -26,6 +27,7 @@ Item {
 
     property string devicePath: ""            // Will become "/dev/nvme1n1p3" dynamically
     property string deviceName: ""            // Will become "nvme1n1p3" dynamically
+    property string ssdModel: ""              // Will become "SSD Model number" dynamically
     
     // --- Output Performance & Graph Metrics ---
     readonly property real diskReadBytesSec: _diskReadBytesSec
@@ -63,6 +65,43 @@ Item {
         width: root.containerWidth
         anchors.horizontalCenter: parent.horizontalCenter
 
+        // Standardized Header Container (Left & Right text)
+        Item {
+            id: diskHeader
+            width: parent.width
+            height: 18
+//            anchors.top: parent.top
+            anchors.topMargin: 1
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            Text {
+                anchors.left: parent.left
+                color: "white"
+                font.pixelSize: 14
+                text: modelSize
+            }
+            Text {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom // Aligns base fonts cleanly
+                anchors.bottomMargin: 2
+                color: "white"
+                font.pixelSize: 10
+                text: "(" + root.mountPoint + ")" 
+            }
+
+            HoverHandler {
+                id: textHover2
+            }
+
+            Tooltip {
+                id: ssdModTooltip
+                target: diskHeader
+                show: textHover2.hovered
+                text: root.ssdModel
+                fontPixelSize: 18
+            }
+        }
+
         // -------------------------------------------
         // --- 1. Read Metrics Text Layout (Left & Right alignment)
         // -------------------------------------------
@@ -72,7 +111,7 @@ Item {
 
             Text {
                 anchors.left: parent.left
-                anchors.top: parent.top
+                anchors.top: diskHeader.bottom
                 anchors.topMargin: -2 // Shifts read text slightly upwards
                 color: "#00BBFF" // Bluish tone
                 font.pixelSize: 12
@@ -134,6 +173,7 @@ Item {
                     ctx.stroke()
                 }
             }
+
         }
 
         // -------------------------------------------
@@ -256,6 +296,35 @@ Item {
     //  Data Gathering & Shell Resolution Systems
     // ==================================================================
     FileView {
+        id: modelFile
+        property string clean: deviceName.replace(/^\/dev\//, "")
+        
+        // Logic:
+        // 1. If NVMe: Remove 'n' + digits + optional 'p' + digits. Keep 'nvmeX'.
+        // 2. If SD: Remove trailing digits. Keep 'sdX'.
+        property string base: {
+            if (clean.startsWith("nvme"))
+                return clean.replace(/n\d+(p\d+)?$/, ""); // Handles nvme0n1 AND nvme0n1p3
+            else if (clean.startsWith("sd"))
+                return clean.replace(/\d+$/, ""); // Handles sdd1 -> sdd
+            return "";
+        }
+
+        path: {
+            if (!base) return "";
+            if (base.startsWith("nvme"))
+                return `/sys/class/nvme/${base}/model`;
+            else
+                return `/sys/class/block/${base}/device/model`;
+        }
+
+        blockLoading: true
+        onLoaded: {
+            root.ssdModel = text().trim();
+        }
+    }
+
+    FileView {
         id: diskStatsFile
         path: "/proc/diskstats"
     }
@@ -308,7 +377,9 @@ Item {
        }
     }
 
+    // ==================================================================
     // Recurring capacity polling timer engine loop
+    // ==================================================================
     Timer {
        id: diskUsedTimer
        interval: 5000 // 5 seconds matches your tracking preferences perfectly

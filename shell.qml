@@ -229,36 +229,12 @@ ShellRoot {
                 border.color: rootWindow.widgetBorderColor
                 border.width: 2
 
-                // Standardized Header Container (Left & Right text)
-                Item {
-                    id: disk1Header
-                    width: rootWindow.containerWidth
-                    height: 18
-                    anchors.top: parent.top
-                    anchors.topMargin: 1
-                    anchors.horizontalCenter: parent.horizontalCenter
-
-                    Text {
-                        anchors.left: parent.left
-                        color: "white"
-                        font.pixelSize: 14
-                        text: "SSD M.2 4.0T"         // CHANGE THIS  *****
-                    }
-                    Text {
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom // Aligns base fonts cleanly
-                        anchors.bottomMargin: 2
-                        color: "white"
-                        font.pixelSize: 10
-                        text: "(/home)"              // CHANGE THIS  *****
-                    }
-                }
-
                 Disk {
                     containerWidth: rootWindow.containerWidth
+                    modelSize: "SSD M.2 4.0T"          // CHANGE THIS  *****
                     mountPoint: "/home"                // CHANGE THIS  *****
                     mountDev: ""                       // leave this blank, unless needed *****
-                    anchors.top: disk1Header.bottom
+                    anchors.top: parent.top
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -276,35 +252,12 @@ ShellRoot {
                 border.color: rootWindow.widgetBorderColor
                 border.width: 2
 
-                Item {
-                    id: disk2Header
-                    width: rootWindow.containerWidth
-                    height: 18
-                    anchors.top: parent.top
-                    anchors.topMargin: 1
-                    anchors.horizontalCenter: parent.horizontalCenter
-
-                    Text {
-                        anchors.left: parent.left
-                        color: "white"
-                        font.pixelSize: 14
-                        text: "Disk USB 4.0T"        // CHANGE THIS  *****
-                    }
-                    Text {
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 2
-                        color: "white"
-                        font.pixelSize: 10
-                        text: "(/backups)"           // CHANGE THIS  *****
-                    }
-                }
-
                 Disk {
                     containerWidth: rootWindow.containerWidth
+                    modelSize: "Disk USB 4.0T"         // CHANGE THIS  *****
                     mountPoint: "/backups"             // CHANGE THIS  *****
                     mountDev: ""                       // leave this blank, unless needed *****
-                    anchors.top: disk2Header.bottom
+                    anchors.top: parent.top
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -322,35 +275,12 @@ ShellRoot {
                 border.color: rootWindow.widgetBorderColor
                 border.width: 2
 
-                Item {
-                    id: disk3Header
-                    width: rootWindow.containerWidth
-                    height: 18
-                    anchors.top: parent.top
-                    anchors.topMargin: 1
-                    anchors.horizontalCenter: parent.horizontalCenter
-
-                    Text {
-                        anchors.left: parent.left
-                        color: "white"
-                        font.pixelSize: 14
-                        text: "SSD PCIe 1.6T"        // CHANGE THIS  *****
-                    }
-                    Text {
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 2
-                        color: "white"
-                        font.pixelSize: 10
-                        text: "(/timeshift)"         // CHANGE THIS  *****
-                    }
-                }
-
                 Disk {
                     containerWidth: rootWindow.containerWidth
+                    modelSize: "SSD PCIe 1.6T"         // CHANGE THIS  *****
                     mountPoint: "/timeshift"           // CHANGE THIS  *****
                     mountDev: ""                       // leave this blank, unless needed *****
-                    anchors.top: disk3Header.bottom
+                    anchors.top: parent.top
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
