@@ -140,6 +140,7 @@ Item {
                         
                         let usage = 0;
                         if (dTotal > 0) {
+                            //usage = 100 * (1 - (dIdle / dTotal));
                             usage = 100 * (1 - (dIdle / dTotal));
                         }
                         newCoreUsage[coreIndex] = usage;
@@ -161,7 +162,7 @@ Item {
     // Unified Control Loops
     // ==================================================================
     Timer {
-        interval: 1000
+        interval: 600
         running: true
         repeat: true
         triggeredOnStart: true
