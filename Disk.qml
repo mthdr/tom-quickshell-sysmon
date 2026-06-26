@@ -98,7 +98,7 @@ Item {
                 target: diskHeader
                 show: textHover2.hovered
                 text: root.ssdModel
-                fontPixelSize: 18
+                fontPixelSize: 14
             }
         }
 
@@ -212,7 +212,7 @@ Item {
                     target: barTrack
                     show: textHover.hovered
                     text: root.diskPercentUsed + "%"
-                    fontPixelSize: 18
+                    fontPixelSize: 16
                 }
             }
         }

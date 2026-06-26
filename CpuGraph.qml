@@ -126,7 +126,7 @@ Item {
                 target: cpuGraphRect
                 show: textHover.hovered
                 text: root.cpuModel
-                fontPixelSize: 18
+                fontPixelSize: 14
             }
         }
 
