@@ -15,7 +15,9 @@ Rectangle {
     // ==================================================================
     required property real containerWidth
 
-    height: mainColumn.height + 8
+    // STABILITY FIX: Lock to a solid static layout height. This guarantees 
+    // that shell.qml can dynamically shrink-wrap your master sidebar.
+    height: 46
     radius: rootWindow.widgetRadius
     color: rootWindow.widgetBGcolor
     border.color: rootWindow.widgetBorderColor
@@ -31,14 +33,10 @@ Rectangle {
     Column {
         id: mainColumn
         width: root.containerWidth
-        spacing: 2
+        spacing: 4
+        anchors.top: parent.top
+        anchors.topMargin: 4
         anchors.horizontalCenter: parent.horizontalCenter
-
-        // spacer
-        Item {
-            width: 1
-            height: 1
-        }
 
         // -----------------------------------------------
         // --- 1. Volume Text Header Row Container ---
@@ -46,7 +44,6 @@ Rectangle {
         Item {
             width: parent.width
             height: 16
-            // Shift down slightly to mirror your original top margin preference
 
             // Left Label
             Text {
@@ -91,12 +88,6 @@ Rectangle {
             }
         }
 
-        // spacer
-        Item {
-            width: 1
-            height: 1
-        }
-
         // -----------------------------------------------
         // --- 2. Interactive Audio Track Bar ---
         // -----------------------------------------------
@@ -104,7 +95,6 @@ Rectangle {
             id: barContainer
             width: parent.width
             height: 12
-            //border.color: "#55FF55"
             border.color: (Pipewire.defaultAudioSink?.audio.muted ?? false) ? "#339933" : "#55FF55"
             border.width: 1            
             color: "#66000000"
@@ -114,11 +104,9 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.margins: 1 // Keeps the fill neatly bounded inside your border width
+                anchors.margins: 1 
                 width: Math.max(0, (parent.width - 2) * (Pipewire.defaultAudioSink?.audio.volume ?? 0))
-                //color: "#55FF55"
                 color: (Pipewire.defaultAudioSink?.audio.muted ?? false) ? "#339933" : "#55FF55"
-
             }
 
             MouseArea {
@@ -147,6 +135,8 @@ Rectangle {
                 // Volume Slider Active Click Drag Handler
                 onPositionChanged: mouse => {
                     if (mouse.pressed && Pipewire.defaultAudioSink?.audio) {
+                        // ROBUSTNESS FIX: Bound your drag coordinates safely between 0 and 1
+                        // to prevent desktop rendering glitches if the mouse exits the widget frame.
                         let newVol = mouse.x / parent.width;
                         Pipewire.defaultAudioSink.audio.volume = Math.max(0.0, Math.min(1.0, newVol));
                     }

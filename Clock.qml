@@ -11,10 +11,14 @@ import Quickshell.Io
 Rectangle {
     id: root
 
+    // ==================================================================
+    // 1. User Tweakable Configurations & Variables
+    // ==================================================================
     required property real containerWidth
 
-    height: Math.floor(0.500 * rootWindow.mywidth + 15)
-    //height: mainColumn.height + 8
+    // SCALABLE LAYOUT FEATURE: Dynamically calculates card bounding height 
+    // based on your global panel width setting.
+    height: Math.floor(0.420 * rootWindow.mywidth + 42)
     radius: rootWindow.widgetRadius
     color: rootWindow.widgetBGcolor
     border.color: rootWindow.widgetBorderColor
@@ -26,12 +30,16 @@ Rectangle {
     property string uptimeText: "Uptime: ..."
 
     // ==================================================================
-    //  UI Layout (Standardized Positioner)
+    // 2. Display Data on UI Layout (Standardized Positioner)
     // ==================================================================
     Column {
         id: mainColumn
-        width: root.containerWidth
-        spacing: 2
+        width: root.containerWidth - 16
+        spacing: 4
+
+        // Visual Adjustment: Anchored directly relative to the top border frame
+        anchors.top: parent.top
+        anchors.topMargin: 4
         anchors.horizontalCenter: parent.horizontalCenter
 
         // -----------------------------------------------
@@ -40,14 +48,14 @@ Rectangle {
         Rectangle {
             id: targetText
             width: timeText.implicitWidth
-            height: timeText.implicitHeight - 6 // Preserved your padding layout preferences
+            height: Math.max(1, timeText.implicitHeight - 6) // Preserved padding layout preference safely
             color: "transparent"
             anchors.horizontalCenter: parent.horizontalCenter
 
             Text {
                 id: timeText
-                // Declarative binding updates automatically when currentTime changes
                 text: Qt.formatTime(root.currentTime, "hh:mm AP")
+                // DYNAMIC SCALING FEATURE: Font thickness tracks panel width modifications
                 font.pixelSize: (root.width / 10) * 2
                 color: "white"
                 anchors.centerIn: parent
@@ -61,7 +69,6 @@ Rectangle {
                 id: clockTooltip
                 target: targetText
                 show: textHover.hovered
-                // Dynamically calculates UTC tooltip text representation reactively
                 text: {
                     let d = root.currentTime;
                     let hh = String(d.getUTCHours()).padStart(2, '0');
@@ -78,7 +85,7 @@ Rectangle {
         // ------------------------------------------------------
         Rectangle {
             id: container
-            width: rootWindow.mywidth - 40
+            width: parent.width
             height: 2
             color: "black"
             anchors.horizontalCenter: parent.horizontalCenter
@@ -87,8 +94,7 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                // Maps 0-59 smooth width transitions cleanly
-                width: parent.width * (root.currentSecond / 59)
+                width: parent.width * (Math.max(0, Math.min(59, root.currentSecond)) / 59)
                 color: "white"
             }
         }
@@ -122,7 +128,7 @@ Rectangle {
         // -------------------------------------------------
         Rectangle {
             id: dateBar
-            width: rootWindow.mywidth - 60
+            width: parent.width - 20
             height: 1
             anchors.horizontalCenter: parent.horizontalCenter
             color: "#00FF77"
@@ -143,14 +149,16 @@ Rectangle {
     }
 
     // ==================================================================
-    //  Data Gathering & File System Processing Channels
+    // 3. Data Gathering & File System Processing Channels
     // ==================================================================
     FileView {
         id: uptimeFile
         path: "/proc/uptime"
     }
 
-    // Single unified master clock loop engine updates once per second
+    // ==================================================================
+    // 4. Automation & Driving Loops
+    // ==================================================================
     Timer {
         interval: 1000
         running: true
@@ -158,15 +166,16 @@ Rectangle {
         triggeredOnStart: true
 
         onTriggered: {
-            // 1. Kick the core clock pulse binding chain
-            root.currentTime = new Date();
-            root.currentSecond = root.currentTime.getSeconds();
+            // Kick the core clock pulse binding chain
+            let d = new Date();
+            root.currentTime = d;
+            root.currentSecond = d.getSeconds();
 
-            // 2. High-performance, zero-fork Uptime Parsing Pass
+            // High-performance, zero-fork Uptime Parsing Pass
             uptimeFile.reload();
-            let rawData = (typeof uptimeFile.text === "function") ? uptimeFile.text() : uptimeFile.text;
+            let rawData = uptimeFile.text().trim();
             if (rawData) {
-                let uptimeSeconds = parseInt(rawData.trim().split(' ')[0]);
+                let uptimeSeconds = parseInt(rawData.split(' '), 10);
                 if (!isNaN(uptimeSeconds)) {
                     let days = Math.floor(uptimeSeconds / 86400);
                     let hours = Math.floor((uptimeSeconds % 86400) / 3600);

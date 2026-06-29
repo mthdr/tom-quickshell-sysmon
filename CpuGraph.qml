@@ -100,22 +100,37 @@ Rectangle {
                 onPaint: {
                     let ctx = getContext("2d");
                     ctx.reset();
-                    if (root.cpuHistory.length < 2) return;
+
+                    // 1. PERFORMANCE: Cache properties to eliminate engine cross-boundary lag
+                    let data = root.cpuHistory;
+                    let len = data.length;
+                    let limit = root.maxHistoryPoints;
+
+                    // 2. ROBUSTNESS: Ensure safe boundaries to avoid NaN errors and crashes
+                    if (len < 2 || limit <= 1) return;
 
                     ctx.fillStyle = "#00FFFF";
                     ctx.strokeStyle = "cyan";
                     ctx.lineWidth = 1;
                     ctx.beginPath();
+
+                    // Baseline for Normal Upward graph is Y = height (bottom)
                     ctx.moveTo(width, height);
 
-                    let step = width / (root.maxHistoryPoints - 1);
-                    for (let i = 0; i < root.cpuHistory.length; i++) {
-                        let idx = root.cpuHistory.length - 1 - i;
+                    let step = width / (limit - 1);
+
+                    for (let i = 0; i < len; i++) {
+                        let idx = len - 1 - i;
                         let x = width - (i * step);
-                        let y = height - (root.cpuHistory[idx] / 100) * height;
+
+                        // Normal Upward Math (CPU usage values are inherently percentages 0-100)
+                        let y = height - ((data[idx] / 100) * height);
+
                         ctx.lineTo(x, y);
                     }
-                    let lastX = width - ((root.cpuHistory.length - 1) * step);
+
+                    // Close the path clean along the bottom baseline (Y = height)
+                    let lastX = width - ((len - 1) * step);
                     ctx.lineTo(lastX, height);
                     ctx.closePath();
 
@@ -142,23 +157,20 @@ Rectangle {
         // ------------------------------
         Item {
             width: parent.width
-            height: 16
+            // CLEAN FIX: Increased container height slightly to build an automatic, 
+            // rock-solid layout gap beneath the text without needing an empty spacer.
+            height: 19
 
             Text {
+                // ROBUSTNESS: Always use horizontalCenter inside a Column, but REMOVED anchors.top
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top
-                anchors.topMargin: -1
+                y: -1
                 text: "CPU Usage: " + (root.currentCpuUsage < 10 ? root.currentCpuUsage.toFixed(1) : Math.round(root.currentCpuUsage)) + "%"
                 color: "cyan"
                 font.pixelSize: 14
             }
         }
 
-        // Spacer
-        Item {
-            width: 1
-            height: 3
-        }
         // -----------------------------------------------
         // Core Usage Container Vertical Bars
         // -----------------------------------------------
@@ -177,7 +189,7 @@ Rectangle {
                 // Computes pixel-perfect uniform bar widths on the fly
                 readonly property real optimalBarWidth: {
                     let totalCores = root.coreUsages ? root.coreUsages.length : 1;
-                    if (totalCores === 0) return 1;
+                    if (totalCores <= 0) return 1;
                     let totalSpacing = root.barSpacing * (totalCores - 1);
                     return Math.max(1, Math.floor((root.containerWidth - totalSpacing) / totalCores));
                 }
@@ -198,14 +210,19 @@ Rectangle {
                         Rectangle {
                             anchors.bottom: parent.bottom
                             width: parent.width
-                            height: Math.max(0, Math.min(parent.height, parent.height * (modelData / 100.0)))
+                            // PERFORMANCE: Simplified the bounding constraints to allow rapid UI rendering ticks
+                            height: {
+                                let pct = parseFloat(modelData);
+                                if (isNaN(pct) || pct <= 0) return 0;
+                                if (pct >= 100) return parent.height;
+                                return parent.height * (pct / 100.0);
+                            }
                             color: root.barColor
                         }
                     }
                 }
             }
         }
-
     }
 
     // ==================================================================
@@ -218,8 +235,9 @@ Rectangle {
         id: cpuInfoReader
         path: "/proc/cpuinfo"
         onLoaded: {
-            let content = (typeof text === "function") ? text() : text;
+            let content = text().trim();
             if (!content) return;
+
             let lines = content.split("\n");
             for (let i = 0; i < lines.length; i++) {
                 if (lines[i].startsWith("model name")) {
@@ -234,25 +252,83 @@ Rectangle {
     }
 
     // -----------------------------------------
-    // Core CPU Load Statistics Reader
-    FileView {
-        id: statReaderAvg
-        path: "/proc/stat"
-        onLoaded: {
-            let content = (typeof text === "function") ? text() : text;
-            if (!content) return;
-            let lines = content.split("\n");
+    // Dynamic Clock Speed Frequency Reader
+    FileView {      
+        id: freqReader 
+        path: "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
 
+        onLoaded: { 
+            // 1. PERFORMANCE: Direct functional lookup removes heavy engine overhead layers
+            let content = text().trim();
+            if (!content) return;
+
+            // 2. RADIX SAFETY: Forcing a base-10 conversion ensures bulletproof arithmetic parsing
+            let khz = parseInt(content, 10);
+            if (!isNaN(khz)) {
+                root.cpuFreq = (khz / 1000000).toFixed(2) + " GHz";
+            }       
+        }           
+    }
+
+    // -----------------------------------------
+    // SHARED BACKEND PARSER 
+    // Reads /proc/stat once and handles whichever dataset is requested
+    // -----------------------------------------
+    FileView {
+        id: unifiedStatReader
+        path: "/proc/stat"
+
+        // Hidden tracking properties to let the timers talk to the parser safely
+        property bool _parseGraphData: false
+        property bool _parseBarData: false
+
+        onLoaded: {
+            let content = text().trim();
+            if (!content) return;
+
+            let lines = content.split("\n");
+            let parseGraph = unifiedStatReader._parseGraphData;
+            let parseBars = unifiedStatReader._parseBarData;
+
+            // Temporary arrays for core tracking
+            let newCoreTotal = [];
+            let newCoreIdle = [];
+            let newCoreUsage = [];
+            let maxIndex = -1;
+
+            // Pre-scan core boundaries only if we are actively updating the high-speed bars
+            if (parseBars) {
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    let parts = line.split(/\s+/);
+                    if (parts[0].startsWith("cpu") && parts[0].length > 3) {
+                        let coreIdx = parseInt(parts[0].substring(3), 10);
+                        if (!isNaN(coreIdx)) maxIndex = Math.max(maxIndex, coreIdx);
+                    }
+                }
+                if (maxIndex !== -1) {
+                    for (let i = 0; i <= maxIndex; i++) {
+                        newCoreUsage.push(0);
+                        newCoreTotal.push(0);
+                        newCoreIdle.push(0);
+                    }
+                }
+            }
+
+            // --- SINGLE SCAN PASS ---
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
-                if (line.startsWith("cpu ")) {
-                    let parts = line.split(/\s+/);
-                    let aggIdle = parseInt(parts[4]) + parseInt(parts[5]);
+                if (line === "") continue;
 
-                    // Sum up user, nice, system, idle, iowait, irq, softirq tokens
+                let parts = line.split(/\s+/);
+                let firstToken = parts[0];
+
+                // Graph Trigger: Runs exactly every 1000ms with fresh, non-cached values
+                if (parseGraph && firstToken === "cpu") {
+                    let aggIdle = (parseInt(parts[4], 10) || 0) + (parseInt(parts[5], 10) || 0);
                     let aggTotal = 0;
                     for (let j = 1; j < 8; j++) {
-                        aggTotal += parseInt(parts[j]) || 0;
+                        aggTotal += parseInt(parts[j], 10) || 0;
                     }
 
                     if (root.lastTotal > 0) {
@@ -260,81 +336,34 @@ Rectangle {
                         let dIdle = aggIdle - root.lastIdle;
                         let aggUsage = dTotal > 0 ? 100 * (1 - dIdle / dTotal) : 0;
 
-                        let hist = [...root.cpuHistory];
+                        let hist = root.cpuHistory.slice();
                         hist.push(aggUsage);
                         if (hist.length > root.maxHistoryPoints) hist.shift();
+
                         root.cpuHistory = hist;
                         root.currentCpuUsage = aggUsage;
                     }
                     root.lastTotal = aggTotal;
                     root.lastIdle = aggIdle;
-                    break;
+
+                    if (!parseBars) break; // If we aren't tracking bars on this tick, we can stop scanning early!
                 }
-            }
-        }
-    }
 
-    FileView {
-        id: statReader
-        path: "/proc/stat"
+                // Vertical Bars Trigger: Runs exactly every 600ms
+                else if (parseBars && firstToken.startsWith("cpu") && firstToken.length > 3 && maxIndex !== -1) {
+                    let coreIndex = parseInt(firstToken.substring(3), 10);
+                    if (isNaN(coreIndex) || coreIndex > maxIndex) continue;
 
-        onLoaded: {
-            let content = (typeof text === "function") ? text() : text;
-            if (!content) return;
-
-            let lines = content.split("\n");
-            let newCoreTotal = [];
-            let newCoreIdle = [];
-            let newCoreUsage = [];
-
-            // 1. First pass: Determine max core index safely
-            let maxIndex = -1;
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                let parts = line.split(/\s+/);
-                if (parts[0].startsWith("cpu") && parts[0].length > 3) {
-                    let coreNumStr = parts[0].substring(3);
-                    let idx = parseInt(coreNumStr);
-                    if (!isNaN(idx)) {
-                        maxIndex = Math.max(maxIndex, idx);
-                    }
-                }
-            }
-
-            if (maxIndex === -1) return; // No per-core metrics parsed
-
-            // Initialize data vectors
-            for (let i = 0; i <= maxIndex; i++) {
-                newCoreUsage.push(0);
-                newCoreTotal.push(0);
-                newCoreIdle.push(0);
-            }
-
-            // 2. Second pass: Calculate differential core delta loads
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                let parts = line.split(/\s+/);
-
-                // Matches individual lines (cpu0, cpu1, cpu12, etc.) but skips aggregate total "cpu " line
-                if (parts[0].startsWith("cpu") && parts[0].length > 3 && !isNaN(parseInt(parts[0].charAt(3)))) {
-                    let coreIndex = parseInt(parts[0].substring(3));
-                    let idle = parseInt(parts[4]) || 0; // Index 4 matches core idle state cycles
-
+                    let idle = parseInt(parts[4], 10) || 0;
                     let total = 0;
                     for (let j = 1; j < parts.length; j++) {
-                        total += parseInt(parts[j]) || 0;
+                        total += parseInt(parts[j], 10) || 0;
                     }
 
                     if (root.lastCoreTotal[coreIndex] !== undefined) {
                         let dTotal = total - root.lastCoreTotal[coreIndex];
                         let dIdle = idle - root.lastCoreIdle[coreIndex];
-
-                        let usage = 0;
-                        if (dTotal > 0) {
-                            //usage = 100 * (1 - (dIdle / dTotal));
-                            usage = 100 * (1 - (dIdle / dTotal));
-                        }
-                        newCoreUsage[coreIndex] = usage;
+                        newCoreUsage[coreIndex] = dTotal > 0 ? 100 * (1 - dIdle / dTotal) : 0;
                     }
 
                     newCoreTotal[coreIndex] = total;
@@ -342,31 +371,21 @@ Rectangle {
                 }
             }
 
-            // Atomically update data properties to avoid layout micro-stuttering
-            root.coreUsages = newCoreUsage;
-            root.lastCoreTotal = newCoreTotal;
-            root.lastCoreIdle = newCoreIdle;
-        }
-    }
-
-    // -----------------------------------------
-    // Dynamic Clock Speed Frequency Reader
-    FileView {
-        id: freqReader
-        path: "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
-        onLoaded: {
-            let content = (typeof text === "function") ? text() : text;
-            if (!content) return;
-            let khz = parseInt(content.trim());
-            if (!isNaN(khz)) {
-                root.cpuFreq = (khz / 1000000).toFixed(2) + " GHz";
+            // Commit visual bar changes to the UI layer
+            if (parseBars && maxIndex !== -1) {
+                root.coreUsages = newCoreUsage;
+                root.lastCoreTotal = newCoreTotal;
+                root.lastCoreIdle = newCoreIdle;
             }
+
+            // Reset request flags for the next incoming timer tick
+            unifiedStatReader._parseGraphData = false;
+            unifiedStatReader._parseBarData = false;
         }
     }
 
 
-
-    // Compressed scanning states
+    // Vars to help with CPU temp discovery
     property int _hIdx: 0
     property int _lIdx: 1
     property string _baseDir: ""
@@ -378,8 +397,10 @@ Rectangle {
     FileView {
         id: discoveryReader
         printErrors: false
+
         onLoaded: {
-            let txt = (typeof text === "function" ? text() : text).trim();
+            // PERFORMANCE: Direct functional lookup removes heavy type-checking layers
+            let txt = text().trim();
             if (!txt) return;
 
             if (_baseDir === "" && txt === root.sensorChipName) {
@@ -395,24 +416,34 @@ Rectangle {
     // SECTION 2: Pure Runtime Reader (Timer polling every 2 Seconds)
     // -----------------------------------------
     FileView {
-        id: sysfsReader
+        id: cpuTempReader
         path: root.resolvedTempPath
         printErrors: false
+
         onLoaded: {
-            let txt = (typeof text === "function" ? text() : text).trim();
-            if (!isNaN(txt)) root.cpuTemp = Math.round(Number(txt) / 1000) + "°C";
+            let txt = text().trim();
+            if (!txt) return;
+
+            // RADIX SAFETY: Forcing a base-10 conversion guarantees clean numeric layouts
+            let rawTemp = parseInt(txt, 10);
+            if (!isNaN(rawTemp) && rawTemp > 0) {
+                root.cpuTemp = Math.round(rawTemp / 1000) + "°C";
+            }
         }
     }
-
 
     // ==================================================================
     // Runtime Control Timer Loops
     // ==================================================================
+
+    // Timer to find CPU temp file path, runs once.
     Timer {
+        id: discoveryDiscoveryTimer
         interval: 25
         running: !root.pathVarIsReady     // Runs only while cpu temp path is NOT ready
         repeat: true
         triggeredOnStart: true
+
         onTriggered: {
             if (_baseDir === "") {
                 if (_hIdx < 16) {
@@ -432,35 +463,37 @@ Rectangle {
         }
     }
 
+    // Timer for CPU temp at 2000 ms
     Timer {
         interval: 2000
         running: root.pathVarIsReady // Wakes up the exact moment the master switch flips
         repeat: true
-        triggeredOnStart: true 
-        onTriggered: sysfsReader.reload()
+        triggeredOnStart: true
+        onTriggered: cpuTempReader.reload()
     }
 
+    // Timer for the CPU graph update and CPU frequency speed at 1000 ms
     Timer {
         interval: 1000
         running: true
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            statReaderAvg.reload();
             freqReader.reload();
-
+            unifiedStatReader._parseGraphData = true;
+            unifiedStatReader.reload();
         }
     }
 
+    // Timer for the CPU vertical bars at 600 ms
     Timer {
         interval: 600
         running: true
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            statReader.reload();
+            unifiedStatReader._parseBarData = true;
+            unifiedStatReader.reload();
         }
     }
-
 }
-

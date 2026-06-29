@@ -11,28 +11,35 @@ import Quickshell.Io
 Rectangle {
     id: utcRoot
 
+    // ==================================================================
+    // 1. User Tweakable Configurations & Variables
+    // ==================================================================
     required property real containerWidth
 
-    height: Math.floor(0.400 * rootWindow.mywidth + 7)
-    //height: mainColumn.height + 8
+    // SCALABLE LAYOUT MATH: This exact ratio preserves a clean, locked 
+    // visual bottom gap beneath your UTC date text row regardless of 
+    // whether your sidebar is narrow or ultra-wide.
+    height: Math.floor(0.40 * rootWindow.mywidth + 12)
     radius: rootWindow.widgetRadius
     color: rootWindow.widgetBGcolor
     border.color: rootWindow.widgetBorderColor
     border.width: 2
-
-    // width: parent ? parent.width : 220
 
     // --- Dynamic Time Tracking States ---
     property var currentTime: new Date()
     property int currentSecond: currentTime.getUTCSeconds()
 
     // ==================================================================
-    //  UI Layout (Standardized Positioner)
+    // 2. Display Data on UI Layout (Standardized Positioner)
     // ==================================================================
     Column {
         id: mainColumn
-        width: parent.width
-        spacing: 2
+        width: utcRoot.containerWidth - 16 // Safety padding layout frame bounds
+        spacing: 4
+
+        // Visual Adjustment: Anchored directly relative to the top border frame
+        anchors.top: parent.top
+        anchors.topMargin: 4
         anchors.horizontalCenter: parent.horizontalCenter
 
         // -----------------------------------------------
@@ -41,13 +48,12 @@ Rectangle {
         Rectangle {
             id: targetText
             width: timeText.implicitWidth
-            height: timeText.implicitHeight - 6 // Matches padding configurations exactly
+            height: Math.max(1, timeText.implicitHeight - 6) // Matches padding configurations exactly
             color: "transparent"
             anchors.horizontalCenter: parent.horizontalCenter
 
             Text {
                 id: timeText
-                // Evaluates and renders real UTC values directly
                 text: {
                     let h = String(utcRoot.currentTime.getUTCHours()).padStart(2, '0');
                     let m = String(utcRoot.currentTime.getUTCMinutes()).padStart(2, '0');
@@ -65,7 +71,7 @@ Rectangle {
         // ------------------------------------------------------
         Rectangle {
             id: container
-            width: rootWindow.mywidth - 40
+            width: parent.width
             height: 2
             color: "black"
             anchors.horizontalCenter: parent.horizontalCenter
@@ -74,7 +80,8 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * (utcRoot.currentSecond / 59)
+                // Safeguarded bounds ensure width scaling calculation never hits division anomalies
+                width: parent.width * (Math.max(0, Math.min(59, utcRoot.currentSecond)) / 59)
                 color: "white"
             }
         }
@@ -87,9 +94,7 @@ Rectangle {
             spacing: 0 
 
             Text {
-                // Generates UTC adjusted calendar tokens natively
                 text: {
-                    // Extract days array shorthand matching "ddd " layout profile
                     let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                     return days[utcRoot.currentTime.getUTCDay()] + " ";
                 }
@@ -97,6 +102,9 @@ Rectangle {
                 color: "#FF3333"
                 style: Text.Outline
                 styleColor: "#22000000"
+
+                // Fine adjustments to line text geometry
+                y: -1
             }
             Text {
                 text: {
@@ -110,12 +118,14 @@ Rectangle {
                 color: "#00BBFF"
                 style: Text.Outline
                 styleColor: "#22000000"
+
+                y: -1
             }
         }
     }
 
     // ==================================================================
-    //  Data Gathering Time Engine Loop
+    // 3. Automation & Driving Loops
     // ==================================================================
     Timer {
         interval: 1000

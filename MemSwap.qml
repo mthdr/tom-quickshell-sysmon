@@ -83,30 +83,47 @@ Rectangle {
                 onPaint: {
                     let ctx = getContext("2d");
                     ctx.reset();
-                    if (root.memHistory.length < 2) return;
+
+                    // 1. PERFORMANCE: Cache properties to prevent C++/JS cross-boundary overhead
+                    let data = root.memHistory;
+                    let len = data.length;
+                    let totalMem = root.memTotal;
+                    let limit = root.maxHistoryPoints;
+
+                    // 2. ROBUSTNESS: Prevent crashes, NaN layout bugs, and division-by-zero
+                    if (len < 2 || totalMem <= 0 || limit <= 1) return;
 
                     ctx.fillStyle = "#00FF00";
-                    ctx.strokeStyle = "#00FF00"; 
+                    ctx.strokeStyle = "#00FF00";
                     ctx.lineWidth = 1;
                     ctx.beginPath();
+
+                    // Baseline for Normal Upward graph is Y = height (bottom)
                     ctx.moveTo(width, height);
 
-                    let step = width / (root.maxHistoryPoints - 1);
-                    for (let i = 0; i < root.memHistory.length; i++) {
-                        let idx = root.memHistory.length - 1 - i;
+                    let step = width / (limit - 1);
+
+                    for (let i = 0; i < len; i++) {
+                        let idx = len - 1 - i;
                         let x = width - (i * step);
-                        let percent = (root.memTotal > 0) ? (root.memHistory[idx] / root.memTotal) * 100 : 0;
-                        let y = height - (percent / 100) * height;
+
+                        // Normal Upward Math simplified via cached local variables:
+                        // 0 value results in y = height (physical bottom)
+                        // Max value (memTotal) results in y = 0 (physical top)
+                        let y = height - ((data[idx] / totalMem) * height);
+
                         ctx.lineTo(x, y);
                     }
-                    let lastX = width - ((root.memHistory.length - 1) * step);
+
+                    // Close the path clean along the bottom baseline (Y = height)
+                    let lastX = width - ((len - 1) * step);
                     ctx.lineTo(lastX, height);
                     ctx.closePath();
 
                     ctx.fill();
                     ctx.stroke();
                 }
-            }   
+            }
         }
 
         // ---------------------------
@@ -119,8 +136,9 @@ Rectangle {
             Text {
                 anchors.left: parent.left
                 anchors.top: parent.top
-                anchors.topMargin: -2 // Shuts padding gap gaps tightly
-                text: "Mem used:  " + formatSize(root.memUsed) + "    (" + root.memPerUsed.toFixed(1) + "%)"
+                anchors.topMargin: -2 // Shuts padding gaps tightly
+                // ROBUSTNESS: Ensure the percent readout degrades gracefully if undefined early on
+                text: "Mem used:  " + formatSize(root.memUsed) + "    (" + (typeof root.memPerUsed === "number" ? root.memPerUsed.toFixed(1) : "0.0") + "%)"
                 color: "#00FF00"
                 font.pixelSize: 12
             }
@@ -147,7 +165,13 @@ Rectangle {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     anchors.margins: 1
-                    width: (root.swapTotal > 0) ? Math.max(0, (parent.width - 2) * (root.swapUsed / root.swapTotal)) : 0
+                    // ROBUSTNESS: Cached boundaries ensure that width calculation loops never feed bad data into the animation engine
+                    width: {
+                        let total = root.swapTotal;
+                        let used = root.swapUsed;
+                        if (total <= 0 || used <= 0) return 0;
+                        return Math.min(parent.width - 2, (parent.width - 2) * (used / total));
+                    }
                     color: "#FF3333"
 
                     Behavior on width { NumberAnimation { duration: 250 } }
@@ -166,22 +190,21 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.topMargin: -2
-                text: "Swap used:  " + formatSize(root.swapUsed) + "    (" + root.swapPerUsed.toFixed(1) + "%)"
+                text: "Swap used:  " + formatSize(root.swapUsed) + "    (" + (typeof root.swapPerUsed === "number" ? root.swapPerUsed.toFixed(1) : "0.0") + "%)"
                 color: "#FF3333"
                 font.pixelSize: 12
             }
         }
     }
 
-    // Helper formatting function to convert bits/sec to readable metrics (Kbps, Mbps)
+    // Helper formatting function to convert bytes to readable metrics (KB, MB, GB)
     function formatSize(value) {
-        if (value >= 1024 * 1024 * 1024) return (value / (1024 * 1024 * 1024)).toFixed(1) + " GB"
-        if (value >= 1024 * 1024) return (value / (1024 * 1024)).toFixed(1) + " MB"
+        // PERFORMANCE: Check the absolute number size instead of evaluating multiple multiplications inline
+        if (value >= 1073741824) return (value / 1073741824).toFixed(1) + " GB"
+        if (value >= 1048576) return (value / 1048576).toFixed(1) + " MB"
         if (value >= 1024) return (value / 1024).toFixed(1) + " KB"
-        return value.toFixed(1) + " B"
+        return (typeof value === "number" ? value.toFixed(1) : "0.0") + " B"
     }
-
-
 
     // ==================================================================
     //  Data Gathering Subsystems
@@ -191,26 +214,29 @@ Rectangle {
         path: "/proc/meminfo"
 
         onLoaded: {
-            let content = (typeof text === "function") ? text() : text;
+            // 1. PERFORMANCE: Direct call alignment replaces heavy type checking lookups
+            let content = text().trim();
             if (!content) return;
+
             let lines = content.split("\n");
             let data = { memTotal: 0, memAvailable: 0, swapTotal: 0, swapFree: 0 };
 
-            function parseGB(line) {
+            // 2. RADIX SAFETY & SPEED: Local inline loop parser handles tokens cleanly
+            function parseBytes(line) {
                 let parts = line.split(":");
                 if (parts.length < 2) return 0;
                 let valStr = parts[1].trim().split(/\s+/)[0];
-                let kb = parseInt(valStr);
+                let kb = parseInt(valStr, 10);
 
-                return isNaN(kb) ? 0 : kb * 1024;   // return Bytes
+                return isNaN(kb) ? 0 : kb * 1024;   // returns clean Bytes
             }
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
-                if (line.startsWith("MemTotal:")) data.memTotal = parseGB(line);
-                else if (line.startsWith("MemAvailable:")) data.memAvailable = parseGB(line);
-                else if (line.startsWith("SwapTotal:")) data.swapTotal = parseGB(line);
-                else if (line.startsWith("SwapFree:")) data.swapFree = parseGB(line);
+                if (line.startsWith("MemTotal:")) data.memTotal = parseBytes(line);
+                else if (line.startsWith("MemAvailable:")) data.memAvailable = parseBytes(line);
+                else if (line.startsWith("SwapTotal:")) data.swapTotal = parseBytes(line);
+                else if (line.startsWith("SwapFree:")) data.swapFree = parseBytes(line);
             }
 
             root.memTotal = data.memTotal;
@@ -221,9 +247,13 @@ Rectangle {
             root.swapUsed = data.swapTotal - data.swapFree;
             root.swapPerUsed = data.swapTotal > 0 ? (root.swapUsed / data.swapTotal * 100) : 0;
 
-            let hist = [...root.memHistory];
+            // 3. STORAGE OPTIMIZATION: Swapped array spread engine for memory efficient slice shifting
+            let hist = root.memHistory.slice();
             hist.push(root.memUsed);
-            if (hist.length > root.maxHistoryPoints) hist.shift();
+
+            if (hist.length > root.maxHistoryPoints) {
+                hist.shift();
+            }
             root.memHistory = hist;
         }
     }
@@ -237,4 +267,3 @@ Rectangle {
         onTriggered: memInfoReader.reload()
     }
 }
-

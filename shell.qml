@@ -74,7 +74,7 @@ ShellRoot {
         mask: Region { 
             item: widgetColumn
             Region { item: clockWidget }
-//            Region { item: clockUTCWidget }     // uncomment when adding UTC
+            Region { item: clockUTCWidget }     // uncomment when adding UTC
             Region { item: cpuWidget }
             Region { item: memoryWidget }
             Region { item: networkWidget }
@@ -112,7 +112,7 @@ ShellRoot {
                 containerWidth: rootWindow.containerWidth
                 width: parent.width
             }
-/*******
+
             // ----------------------------------
             // Clock UTC widget  (uncomment to add UTC clock)
             // ----------------------------------
@@ -121,7 +121,7 @@ ShellRoot {
                 containerWidth: rootWindow.containerWidth
                 width: parent.width
             }
-*******/
+
             // ----------------------------------
             // CPU Widget
             // ----------------------------------
