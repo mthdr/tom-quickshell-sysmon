@@ -13,6 +13,7 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 - **Network:** Network, Device name, IP address, Upload graph bits/sec with scale max, and Download graph bits/sec with scale max.
 - **Disk:** Label for Disk/SSD type/size, mount point, Read bytes/sec graph with scale max, partition used bar, Write bytes/sec graph with scale max, TOOLTIP to show used percent over usage bar, TOOLTIP to show drive model over label drive type/size, TOOLTIP to show the device over the mount point, click the mount point to open a Filemanager to that point.
 - **Volume:** Volume setting and display bar, mouse wheel or click, click MUTE button.
+
 Some features will not work correctly when run in a virtualized environment.
 
 ## Features
