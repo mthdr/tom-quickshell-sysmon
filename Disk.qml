@@ -394,9 +394,21 @@ Rectangle {
         path: "/proc/diskstats"
     }
 
+    // If mountDev is provided, use it and ignore the deviceResolver below.
+    Component.onCompleted: {
+        if (root.mountDev && root.mountDev !== "") {
+            // If the user supplied an explicit device name, assign the 3 vars 
+            // immediately at boot and leave the deviceResolver Process dormant!
+            root.diskstatsDev = root.mountDev;
+            root.tooltipDev = root.mountDev;
+            root.deviceName = root.mountDev;
+        }
+    }
+
     Process {
         id: deviceResolver
 
+        // If mountDev is not provided, follow the process below to find it.
         // One-shot line that runs df to find the dev name
         command: ["df", "--output=source", root.mountPoint]
         running: !root.mountDev || root.mountDev === "" // Runs once on startup if empty
