@@ -111,7 +111,7 @@ To swap out, add, or customize your storage monitoring components, look at the D
 
 ## Tips when using enctryped drives
 
-It should resolve encrypted drives to the correct physical device automatically, to be used with the disk IOi and disk Model lookup.  But if the Disk IO status does not work, and the disk model Tooltip does not work, in the disk section of the shell.qml, you set the mountPoint, and also set the mountDev to the real disk device with partition, like sda3 or nvme0n1p2, so it can find the IO stats and device model for the Tooltip.
+It should resolve encrypted drives to the correct physical device automatically, to be used with the disk IO and disk Model lookup.  But if the Disk IO status does not work, and the disk model Tooltip does not work, in the disk section of the shell.qml, you set the mountPoint, and also set the mountDev to the real disk device with partition, like sda3 or nvme0n1p2, so it can find the IO stats and device model for the Tooltip.
 
 ## Tips when using in Toolbox
 
