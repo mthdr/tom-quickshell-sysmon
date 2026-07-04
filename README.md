@@ -17,7 +17,7 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 ## Tooltips
 
 - **Timezone** hover over Time in main clock widget.
-- **CPOU Model** hover over the CPU graph.
+- **CPU Model** hover over the CPU graph.
 - **Disk Model** hover over the Disk label you set for modelSize in shell.qml.
 - **Disk Device** hover over the mountPoint on the Disk widget.
 - **Disk Usage Percent** hover over the orange usage bar.
