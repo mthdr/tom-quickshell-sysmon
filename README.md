@@ -1,3 +1,5 @@
+I made these for myself to keep an eye on my system.  I did not see anything out there for linux that I liked, or that was this comprehensive.  If you find it useful, give it a star or a watch so I can see if anyone is using it.  Thanks.
+
 # Tom's Quickshell System Monitor Widgets Panel
 
 A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network, Disks, Volume, dashboard built for Linux desktop setups using `quickshell`. This widget cluster reads telemetry data directly from virtual kernel file systems (`/proc` and `/sys`), ensuring extremely low CPU usage and near-zero runtime latency.
@@ -24,14 +26,14 @@ A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network
 
 ## Clickables
 
-- **24hr Time** double click on the Time and it will toggle between AM/PM to 24hr clock.
-- **open Calendar** click on the Date to open a Month calendar at timeanddate.com
+- **24hr Time** click on the Time and it will toggle between AM/PM to 24hr clock.
+- **open Calendar** double click on the Date to open a Month calendar at timeanddate.com
 - **open File manager** click on the mountPoint and it opens a File manager to that location.
 - **Audio Mute** click on MUTE in Volume to toggle Mute.
 
 ## Features
 
-- **Very Efficient Processing:** Replaced all shell process loops (`cat`, `awk`, `grep`) with high-speed virtual `FileView` handles.
+- **Very Efficient Processing:** Replaced all shell process loops (`cat`, `awk`, `grep`) with high-speed virtual `FileView` handles in data loops.
 - **Hardware Agnostic Thermal Tracking:** Fully parameterized 2-layer lookup to support modern AMD (`k10temp`) and Intel (`coretemp`) sensors.
 - **Unified Graph Design:** Smooth, right-to-left scrolling visualizations across all core telemetry frameworks.
 
