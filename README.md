@@ -1,6 +1,6 @@
-I made these for myself to keep an eye on my system.  I did not see anything out there for linux that I liked, or that was this comprehensive.  If you find it useful, give it a star or a watch so I can see if anyone is using it.  Thanks.
+I'm re-branding my project to make the association with my SimplePerfMeters for Rainmeter on Windows.  This is my Linux equivalent built with Quickshell.  You should notice the similarities in look and feel between the two projects.  I hope you find this useful as well.
 
-# Tom's Quickshell System Monitor Widgets Panel
+# SimplePerfMeters for Quickshell on Linux
 
 A highly optimized, System Monitor Panel of widgets, Clock, Cpu, Memory, Network, Disks, Volume, dashboard built for Linux desktop setups using `quickshell`. This widget cluster reads telemetry data directly from virtual kernel file systems (`/proc` and `/sys`), ensuring extremely low CPU usage and near-zero runtime latency.
 
